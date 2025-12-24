@@ -1,0 +1,225 @@
+# =============================================
+# ОБЩИЕ НАСТРОЙКИ ДЛЯ ВСЕХ СЕРВИСОВ
+# =============================================
+
+spring:
+  # === ЛОГИРОВАНИЕ ===
+  logging:
+    level:
+      root: INFO
+      org.springframework.web: INFO
+      org.hibernate: INFO
+      ru.marketplace: DEBUG
+    pattern:
+      console: "%d{yyyy-MM-dd HH:mm:ss} - %msg%n"
+  
+  # === JSON НАСТРОЙКИ ===
+  jackson:
+    serialization:
+      write-dates-as-timestamps: false
+    deserialization:
+      fail-on-unknown-properties: false
+  
+  # === JPA НАСТРОЙКИ ===
+  jpa:
+    open-in-view: false
+    properties:
+      hibernate:
+        jdbc:
+          time_zone: UTC
+        connection:
+          provider_disables_autocommit: true
+  
+  # === MVC НАСТРОЙКИ ===  
+  mvc:
+    throw-exception-if-no-handler-found: true
+  
+  # === SERVLET НАСТРОЙКИ ===
+  servlet:
+    multipart:
+      max-file-size: 10MB
+      max-request-size: 10MB
+
+# =============================================
+# EUREKA - ДЛЯ ВСЕХ КЛИЕНТСКИХ СЕРВИСОВ
+# =============================================
+eureka:
+  client:
+    enabled: true
+    register-with-eureka: true
+    fetch-registry: true
+    service-url:
+      defaultZone: ${EUREKA_URL:http://localhost:8761/eureka/}
+    registry-fetch-interval-seconds: 5
+    
+  instance:
+    instance-id: ${spring.application.name}:${server.port}
+    hostname: localhost
+    prefer-ip-address: true
+    lease-renewal-interval-in-seconds: 10
+    lease-expiration-duration-in-seconds: 30
+    metadata-map:
+      zone: default
+      version: 1.0.0
+
+# =============================================
+# ACTUATOR - МОНИТОРИНГ
+# =============================================
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics
+      base-path: /actuator
+    enabled-by-default: true
+  
+  endpoint:
+    health:
+      show-details: always
+      probes:
+        enabled: true
+    metrics:
+      enabled: true
+  
+  info:
+    env:
+      enabled: true
+  
+  metrics:
+    export:
+      prometheus:
+        enabled: true
+    distribution:
+      percentiles-histogram:
+        http.server.requests: true
+
+# =============================================
+# БЕЗОПАСНОСТЬ (если будет security-server)
+# =============================================
+# security:
+#   oauth2:
+#     resourceserver:
+#       jwt:
+#         issuer-uri: ${JWT_ISSUER_URI:http://localhost:8080/realms/myrealm}
+
+# =============================================
+# RESILIENCE4J - УСТОЙЧИВОСТЬ (для orderService)
+# =============================================
+resilience4j:
+  circuitbreaker:
+    configs:
+      default:
+        sliding-window-type: COUNT_BASED
+        minimum-number-of-calls: 5
+        wait-duration-in-open-state: 5s
+  
+  retry:
+    configs:
+      default:
+        max-attempts: 3
+        wait-duration: 1s
+  
+  timelimiter:
+    configs:
+      default:
+        timeout-duration: 3s
+
+# =============================================
+# FEIGN CLIENT (для orderService)
+# =============================================
+feign:
+  client:
+    config:
+      default:
+        connect-timeout: 5000
+        read-timeout: 5000
+        logger-level: basic
+  httpclient:
+    enabled: true
+    max-connections: 200
+    time-to-live: 900
+
+# =============================================
+# CACHE (если будет кэширование)
+# =============================================
+# cache:
+#   type: redis
+#   redis:
+#     time-to-live: 600000
+#     cache-null-values: true
+
+# =============================================
+# КАСТОМНЫЕ НАСТРОЙКИ
+# =============================================
+app:
+  name: Marketplace Microservices
+  version: 1.0.0
+  description: Микросервисная платформа для маркетплейса
+  
+  cors:
+    allowed-origins: "http://localhost:3000,http://localhost:4200"
+    allowed-methods: "GET,POST,PUT,DELETE,OPTIONS"
+    allowed-headers: "*"
+    allow-credentials: true
+  
+  pagination:
+    default-page-size: 20
+    max-page-size: 100
+  
+  validation:
+    email-pattern: "^[A-Za-z0-9+_.-]+@(.+)$"
+    phone-pattern: "^\\+?[1-9]\\d{1,14}$"
+
+# =============================================
+# ПРОФИЛИ (активируются через bootstrap.yml)
+# =============================================
+---
+# PROFILE: dev (активируется через -Dspring.profiles.active=dev)
+spring:
+  config:
+    activate:
+      on-profile: dev
+
+logging:
+  level:
+    root: DEBUG
+    org.hibernate.SQL: DEBUG
+    org.hibernate.type.descriptor.sql.BasicBinder: TRACE
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: "*"
+  
+springdoc:
+  api-docs:
+    path: /v3/api-docs
+  swagger-ui:
+    path: /swagger-ui.html
+    operations-sorter: method
+---
+# PROFILE: prod (активируется через -Dspring.profiles.active=prod)
+spring:
+  config:
+    activate:
+      on-profile: prod
+
+logging:
+  level:
+    root: WARN
+    ru.marketplace: INFO
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+    health:
+      show-details: never
+
+eureka:
+  instance:
+    metadata-map:
+      zone: prod
+      version: ${APP_VERSION:1.0.0}
