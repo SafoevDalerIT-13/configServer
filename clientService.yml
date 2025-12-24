@@ -4,38 +4,42 @@ server:
 spring:
   application:
     name: clientService
-
+  
+  # ====== НАСТРОЙКИ БАЗЫ ДАННЫХ ======
   datasource:
-    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5432/clientService}
-    username: ${SPRING_DATASOURCE_USERNAME:postgres}
-    password: ${SPRING_DATASOURCE_PASSWORD:233122}
-    driver-class-name: org.postgresql.Driver
+    # ЯВНО указываем URL БЕЗ переменных окружения для теста
+    url: jdbc:postgresql://localhost:5432/clientservice  # ← в lowercase
+    username: postgres
+    password: 233122
+    driver-class-name: org.postgresql.Driver  # ← ОБЯЗАТЕЛЬНО!
+    
+    # Hikari Connection Pool
     hikari:
-      maximum-pool-size: 20
       connection-timeout: 30000
+      maximum-pool-size: 10
       minimum-idle: 5
-
+      pool-name: ClientServiceHikariCP
+  
+  # ====== JPA НАСТРОЙКИ ======
   jpa:
     hibernate:
-      ddl-auto: update
+      ddl-auto: update  # создает таблицы автоматически
     show-sql: true
     properties:
       hibernate:
-        jdbc:
-          batch_size: 100
-        default_schema: public
+        dialect: org.hibernate.dialect.PostgreSQLDialect
         format_sql: true
+        jdbc:
+          lob:
+            non_contextual_creation: true
     open-in-view: false
 
-  docker:
-    compose:
-      enabled: false  # ← ВЫКЛЮЧАЕМ автозапуск
-
+# ====== EUREKA ======
 eureka:
   client:
     service-url:
-      default-zone: http://localhost:8761/eureka/
+      defaultZone: http://localhost:8761/eureka/
   instance:
+    instance-id: ${spring.application.name}:${random.int}
     hostname: localhost
     prefer-ip-address: true
-    lease-renewal-interval-in-seconds: 30  # каждые 30 сек "я жив!"
